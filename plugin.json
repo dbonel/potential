@@ -1,0 +1,25 @@
+{
+  "slug": "potential",
+  "name": "potential",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Potential",
+  "author": "Drew Bonel",
+  "authorEmail": "drew.rotated@gmail.com",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "https://github.com/dbonel/potential",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "MagSign",
+      "name": "MagSign",
+      "description": "Decompose bipolar voltage to magnitude and sign",
+      "tags": [
+        "Utility"
+      ]
+    }
+  ]
+}
