@@ -50,8 +50,8 @@ struct MagSign : Module {
 
 			potential::mag_sign_decompose(
 				bipolar_in_values, channel_count,
-				magnitude_out_values, channel_count,
-				sign_out_values, channel_count
+				magnitude_out_values, PORT_MAX_CHANNELS,
+				sign_out_values, PORT_MAX_CHANNELS
 			);
 
 			magnitude_out->setChannels(channel_count);
@@ -65,20 +65,18 @@ struct MagSign : Module {
 			float sign_in_values[PORT_MAX_CHANNELS];
 			float bipolar_out_values[PORT_MAX_CHANNELS];
 
-			int channel_count = sign_in->getChannels();
+			int sign_count = sign_in->getChannels();
 			sign_in->readVoltages(sign_in_values);
-			// Polyphony is set from the sign port, so the magnitudes have to be
-			// at least as many channels. We fill with 0.0 just in case.
-			std::fill_n(magnitude_in_values, PORT_MAX_CHANNELS, 0.0);
+			int magnitude_count = magnitude_in->getChannels();
 			magnitude_in->readVoltages(magnitude_in_values);
 
 			potential::mag_sign_recompose(
-				magnitude_in_values, channel_count,
-				sign_in_values, channel_count,
-				bipolar_out_values, channel_count
+				magnitude_in_values, magnitude_count,
+				sign_in_values, sign_count,
+				bipolar_out_values, PORT_MAX_CHANNELS
 			);
 
-			bipolar_out->setChannels(channel_count);
+			bipolar_out->setChannels(bipolar_count);
 			bipolar_out->writeVoltages(bipolar_out_values);
 		}
 	}

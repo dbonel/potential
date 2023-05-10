@@ -1,8 +1,8 @@
 // Decompose a slice of floats into their magnitudes (the absolute values)
 // and their signs (a value that is either -1.0 or +1.0).
 pub fn decompose(in_values: &[f32], out_magnitudes: &mut [f32], out_signs: &mut [f32]) {
-    debug_assert_eq!(in_values.len(), out_magnitudes.len());
-    debug_assert_eq!(in_values.len(), out_signs.len());
+    debug_assert!(out_signs.len() >= in_values.len());
+    debug_assert!(out_magnitudes.len() >= in_values.len());
     in_values
         .iter()
         .zip(out_magnitudes.iter_mut().zip(out_signs.iter_mut()))
@@ -19,8 +19,8 @@ pub fn decompose(in_values: &[f32], out_magnitudes: &mut [f32], out_signs: &mut 
 }
 
 pub fn recompose(in_magnitudes: &[f32], in_signs: &[f32], out_values: &mut [f32]) {
-    debug_assert_eq!(in_magnitudes.len(), out_values.len());
-    debug_assert_eq!(in_signs.len(), out_values.len());
+    debug_assert!(out_values.len() >= in_signs.len());
+    debug_assert!(out_values.len() >= in_magnitudes.len());
     out_values
         .iter_mut()
         .zip(in_magnitudes.iter().zip(in_signs.iter()))
