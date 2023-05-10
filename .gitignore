@@ -1,0 +1,13 @@
+/build
+/dist
+/*.a
+/*.so
+/*.dylib
+/*.dll
+.DS_Store
+/.envrc
+compile_flags.txt
+libpotential/libpotential.a
+libpotential/potential.h
+libpotential/target
+/.clang-format
