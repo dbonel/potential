@@ -21,3 +21,19 @@ DISTRIBUTABLES += $(wildcard presets)
 
 # Include the Rack plugin Makefile framework
 include $(RACK_DIR)/plugin.mk
+
+libpotential/libpotential.a:
+	make -C libpotential libpotential.a
+
+libpotential/potential.h:
+	make -C libpotential potential.h
+
+.PHONY: rustlib
+rustlib: libpotential/libpotential.a libpotential/potential.h
+
+.PHONY: full
+full: rustlib all
+
+.PHONY: fullclean
+fullclean: clean
+	make -C libpotential clean
