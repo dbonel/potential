@@ -32,7 +32,7 @@ pub unsafe extern "C" fn mag_sign_recompose(
     sign_inputs_len: c_int,
     composed_outputs: *mut f32,
     composed_outputs_len: c_int,
-) {
+) -> c_int {
     let magnitude = unsafe {
         debug_assert!(!magnitude_inputs.is_null());
         std::slice::from_raw_parts(magnitude_inputs, magnitude_inputs_len as usize)
@@ -45,7 +45,8 @@ pub unsafe extern "C" fn mag_sign_recompose(
         debug_assert!(!composed_outputs.is_null());
         std::slice::from_raw_parts_mut(composed_outputs, composed_outputs_len as usize)
     };
-    mag_sign::recompose(magnitude, sign, composed)
+    let out_count = mag_sign::recompose(magnitude, sign, composed);
+    out_count as c_int
 }
 
 pub mod mag_sign;

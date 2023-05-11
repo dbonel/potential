@@ -18,9 +18,12 @@ pub fn decompose(in_values: &[f32], out_magnitudes: &mut [f32], out_signs: &mut 
         });
 }
 
-pub fn recompose(in_magnitudes: &[f32], in_signs: &[f32], out_values: &mut [f32]) {
+pub fn recompose(in_magnitudes: &[f32], in_signs: &[f32], out_values: &mut [f32]) -> usize {
     debug_assert!(out_values.len() >= in_signs.len());
     debug_assert!(out_values.len() >= in_magnitudes.len());
+
+    let out_channel_count = in_signs.len();
+
     // Our output polyphony channels are limited by the polyphony count on the
     // signs input. We can default to 0.0 for magnitudes, but signs don't have a
     // reasonable default.
@@ -35,11 +38,14 @@ pub fn recompose(in_magnitudes: &[f32], in_signs: &[f32], out_values: &mut [f32]
         .zip(in_pairs)
         .for_each(|(o, (i_mag, i_sign))| {
             *o = {
-                if i_mag.is_finite() && i_sign.is_finite() {
-                    i_mag.copysign(*i_sign)
+                let result = i_mag.copysign(*i_sign);
+                if result.is_finite() {
+                    result
                 } else {
                     0.0
                 }
             };
-        })
+        });
+
+    out_channel_count
 }
