@@ -20,6 +20,16 @@
       "tags": [
         "Utility"
       ]
+    },
+    {
+      "slug": "Breaker",
+      "name": "Breaker",
+      "description": "Circuit breaker for excessive signal levels",
+      "tags": [
+        "Utility",
+        "Limiter",
+        "Voltage-controlled amplifier"
+      ]
     }
   ]
 }
