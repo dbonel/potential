@@ -33,41 +33,29 @@ struct MagSign : Module {
 
         // Upper half (decompose) processing
         if (bipolar_in->isConnected()) {
-            float bipolar_in_values[PORT_MAX_CHANNELS];
-            float magnitude_out_values[PORT_MAX_CHANNELS];
-            float sign_out_values[PORT_MAX_CHANNELS];
-
             // This also determines the polyphony count for outputs.
             int channel_count = bipolar_in->getChannels();
-            bipolar_in->readVoltages(bipolar_in_values);
 
             potential::mag_sign_decompose(
-                bipolar_in_values, channel_count, magnitude_out_values,
-                PORT_MAX_CHANNELS, sign_out_values, PORT_MAX_CHANNELS);
+                bipolar_in->getVoltages(), channel_count,
+                magnitude_out->getVoltages(), PORT_MAX_CHANNELS,
+                sign_out->getVoltages(), PORT_MAX_CHANNELS);
 
             magnitude_out->setChannels(channel_count);
-            magnitude_out->writeVoltages(magnitude_out_values);
             sign_out->setChannels(channel_count);
-            sign_out->writeVoltages(sign_out_values);
         }
 
         // Lower half (recompose) processing
         if (magnitude_in->isConnected() || sign_in->isConnected()) {
-            float magnitude_in_values[PORT_MAX_CHANNELS];
-            float sign_in_values[PORT_MAX_CHANNELS];
-            float bipolar_out_values[PORT_MAX_CHANNELS];
-
             int sign_count = sign_in->getChannels();
-            sign_in->readVoltages(sign_in_values);
             int magnitude_count = magnitude_in->getChannels();
-            magnitude_in->readVoltages(magnitude_in_values);
 
             int bipolar_count = potential::mag_sign_recompose(
-                magnitude_in_values, magnitude_count, sign_in_values,
-                sign_count, bipolar_out_values, PORT_MAX_CHANNELS);
+                magnitude_in->getVoltages(), magnitude_count,
+                sign_in->getVoltages(), sign_count, bipolar_out->getVoltages(),
+                PORT_MAX_CHANNELS);
 
             bipolar_out->setChannels(bipolar_count);
-            bipolar_out->writeVoltages(bipolar_out_values);
         }
     }
 };
