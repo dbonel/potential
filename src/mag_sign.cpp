@@ -13,12 +13,12 @@ struct MagSign : Module {
 
     MagSign() {
         config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
-        configInput(BIPOLAR_INPUT, "");
-        configInput(MAGNITUDE_INPUT, "");
-        configInput(SIGN_INPUT, "");
-        configOutput(MAGNITUDE_OUTPUT, "");
-        configOutput(SIGN_OUTPUT, "");
-        configOutput(BIPOLAR_OUTPUT, "");
+        configInput(BIPOLAR_INPUT, "Bipolar");
+        configInput(MAGNITUDE_INPUT, "Magnitude");
+        configInput(SIGN_INPUT, "Sign");
+        configOutput(MAGNITUDE_OUTPUT, "Magnitude");
+        configOutput(SIGN_OUTPUT, "Sign");
+        configOutput(BIPOLAR_OUTPUT, "Bipolar");
     }
 
     void process(const ProcessArgs &args) override {
