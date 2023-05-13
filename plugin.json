@@ -18,6 +18,7 @@
       "name": "MagSign",
       "description": "Decompose bipolar voltage to magnitude and sign",
       "tags": [
+        "Polyphonic",
         "Utility"
       ]
     },
@@ -26,6 +27,7 @@
       "name": "Breaker",
       "description": "Circuit breaker for excessive signal levels",
       "tags": [
+        "Polyphonic",
         "Utility",
         "Limiter",
         "Voltage-controlled amplifier"
