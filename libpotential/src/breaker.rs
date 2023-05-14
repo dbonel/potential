@@ -35,14 +35,11 @@ impl Breaker {
 
         // If any of our input channels has a value out of range, trip the
         // breaker.
-        match self.state {
-            Closed => {
-                let tripped = out_of_range(left_in, THRESHOLD) || out_of_range(right_in, THRESHOLD);
-                if tripped {
-                    self.state = Open;
-                }
+        if let Closed = self.state {
+            let tripped = out_of_range(left_in, THRESHOLD) || out_of_range(right_in, THRESHOLD);
+            if tripped {
+                self.state = Open;
             }
-            _ => {}
         }
 
         match self.state {
