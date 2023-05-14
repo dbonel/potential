@@ -32,6 +32,16 @@
         "Limiter",
         "Voltage-controlled amplifier"
       ]
+    },
+    {
+      "slug": "PolyShuffle",
+      "name": "PolyShuffle",
+      "description": "Randomly shuffle polyphonic channels",
+      "tags": [
+        "Polyphonic",
+        "Random",
+        "Utility"
+      ]
     }
   ]
 }
