@@ -16,3 +16,6 @@ panic = "abort"
 [dependencies]
 cxx = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
+
+[build-dependencies]
+cxx-build = "1.0"
