@@ -94,6 +94,12 @@ impl PolyShuffle {
     }
 }
 
+impl Default for PolyShuffle {
+    fn default() -> Self {
+        PolyShuffle::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
