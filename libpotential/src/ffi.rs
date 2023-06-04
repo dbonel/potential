@@ -5,6 +5,8 @@ pub mod bridge {
     extern "Rust" {
         type Port;
 
+        unsafe fn mag_sign_process_raw(inputs: *const Port, outputs: *mut Port);
+
         type PolyShuffle;
         unsafe fn process_raw(self: &mut PolyShuffle, inputs: *const Port, outputs: *mut Port);
         fn polyshuffle_new() -> *mut PolyShuffle;
@@ -28,6 +30,8 @@ fn drop_raw<T>(ptr: *mut T) {
     let b = unsafe { Box::from_raw(ptr) };
     drop(b);
 }
+
+use crate::mag_sign::mag_sign_process_raw;
 
 use crate::polyshuffle::PolyShuffle;
 pub fn polyshuffle_new() -> *mut PolyShuffle {

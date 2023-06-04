@@ -22,41 +22,9 @@ struct MagSign : Module {
     }
 
     void process(const ProcessArgs &args) override {
-        // Decompose ports (upper half)
-        Input *bipolar_in = &inputs[BIPOLAR_INPUT];
-        Output *magnitude_out = &outputs[MAGNITUDE_OUTPUT];
-        Output *sign_out = &outputs[SIGN_OUTPUT];
-        // Recompose ports (lower half)
-        Input *magnitude_in = &inputs[MAGNITUDE_INPUT];
-        Input *sign_in = &inputs[SIGN_INPUT];
-        Output *bipolar_out = &outputs[BIPOLAR_OUTPUT];
-
-        // Upper half (decompose) processing
-        if (bipolar_in->isConnected()) {
-            // This also determines the polyphony count for outputs.
-            int channel_count = bipolar_in->getChannels();
-
-            potential::mag_sign_decompose(
-                bipolar_in->getVoltages(), channel_count,
-                magnitude_out->getVoltages(), PORT_MAX_CHANNELS,
-                sign_out->getVoltages(), PORT_MAX_CHANNELS);
-
-            magnitude_out->setChannels(channel_count);
-            sign_out->setChannels(channel_count);
-        }
-
-        // Lower half (recompose) processing
-        if (magnitude_in->isConnected() || sign_in->isConnected()) {
-            int sign_count = sign_in->getChannels();
-            int magnitude_count = magnitude_in->getChannels();
-
-            int bipolar_count = potential::mag_sign_recompose(
-                magnitude_in->getVoltages(), magnitude_count,
-                sign_in->getVoltages(), sign_count, bipolar_out->getVoltages(),
-                PORT_MAX_CHANNELS);
-
-            bipolar_out->setChannels(bipolar_count);
-        }
+        const rustlib::Port *inputs = ffi_port(&this->inputs[0]);
+        rustlib::Port *outputs = ffi_port(&this->outputs[0]);
+        rustlib::mag_sign_process_raw(inputs, outputs);
     }
 };
 
