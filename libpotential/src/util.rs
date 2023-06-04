@@ -1,3 +1,9 @@
+// Reference voltages for gate outputs
+pub mod gate {
+    pub const LOW: f32 = 0.0;
+    pub const HIGH: f32 = 10.0;
+}
+
 #[derive(Debug, Default)]
 enum InputTriggerState {
     #[default]
