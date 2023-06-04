@@ -5,4 +5,5 @@ pub mod mag_sign;
 pub mod mag_sign_ffi;
 pub mod polyshuffle;
 pub mod polyshuffle_ffi;
+pub mod rack;
 pub mod util;

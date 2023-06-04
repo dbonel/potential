@@ -1,6 +1,10 @@
+use crate::rack::Port;
+
 #[cxx::bridge(namespace = "rustlib")]
 pub mod bridge {
-    extern "Rust" {}
+    extern "Rust" {
+        type Port;
+    }
 }
 
 // Generic helper to avoid too much boilerplate in FFI _new functions
