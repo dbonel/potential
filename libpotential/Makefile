@@ -1,5 +1,5 @@
 .PHONY: all
-all: potential.h ffi.rs.h libpotential.a
+all: libpotential.a ffi.rs.h
 
 libpotential.a ffi.rs.h: src/*.rs
 ifeq ($(ARCH_NAME),mac-x64)
@@ -10,10 +10,7 @@ else
 $(error Unknown ARCH_NAME $(ARCH_NAME))
 endif
 
-potential.h: cbindgen.toml src/lib.rs
-	cbindgen --config cbindgen.toml --crate potential --output potential.h
-
 .PHONY: clean
 clean:
-	rm -f libpotential.a potential.h
+	rm -f libpotential.a ffi.rs.h
 	cargo clean
