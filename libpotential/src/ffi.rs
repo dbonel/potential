@@ -4,6 +4,11 @@ use crate::rack::Port;
 pub mod bridge {
     extern "Rust" {
         type Port;
+
+        type PolyShuffle;
+        unsafe fn process_raw(self: &mut PolyShuffle, inputs: *const Port, outputs: *mut Port);
+        fn polyshuffle_new() -> *mut PolyShuffle;
+        unsafe fn polyshuffle_free(ptr: *mut PolyShuffle);
     }
 }
 
@@ -22,4 +27,12 @@ fn drop_raw<T>(ptr: *mut T) {
     assert!(!ptr.is_null());
     let b = unsafe { Box::from_raw(ptr) };
     drop(b);
+}
+
+use crate::polyshuffle::PolyShuffle;
+pub fn polyshuffle_new() -> *mut PolyShuffle {
+    new_default_raw()
+}
+pub fn polyshuffle_free(ptr: *mut PolyShuffle) {
+    drop_raw(ptr)
 }
