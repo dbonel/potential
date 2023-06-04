@@ -23,6 +23,20 @@ impl Default for Port {
     }
 }
 
+// FIXME: fill in methods
+#[repr(C)]
+#[derive(Default)]
+pub struct Param {
+    value: f32,
+}
+
+// FIXME: fill in methods
+#[repr(C)]
+#[derive(Default)]
+pub struct Light {
+    value: f32,
+}
+
 // A wrapper type over a reference to a Port inside the Rack engine.
 pub struct InputPort<'a> {
     inner: &'a Port,
@@ -145,5 +159,25 @@ impl<'a> OutputPort<'a> {
         if n > 0 {
             self.as_slice_mut().copy_from_slice(voltages)
         }
+    }
+}
+
+pub struct ModuleLight<'a> {
+    inner: &'a mut Light,
+}
+
+impl ModuleLight<'_> {
+    pub fn set_brightness(&mut self, brightness: f32) {
+        self.inner.value = brightness;
+    }
+}
+
+pub struct ModuleParam<'a> {
+    inner: &'a Param,
+}
+
+impl ModuleParam<'_> {
+    pub fn get_value(&self) -> f32 {
+        self.inner.value
     }
 }
