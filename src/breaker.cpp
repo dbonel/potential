@@ -1,7 +1,7 @@
 #include "plugin.hpp"
 
 struct Breaker : Module {
-    potential::Breaker *inner = NULL;
+    rustlib::Breaker *inner = NULL;
 
     enum ParamId { PARAMS_LEN };
     enum InputId { LEFT_INPUT, RIGHT_INPUT, RESET_INPUT, INPUTS_LEN };
@@ -14,7 +14,7 @@ struct Breaker : Module {
     enum LightId { TRIPPED_LIGHT, LIGHTS_LEN };
 
     Breaker() {
-        this->inner = potential::breaker_new();
+        this->inner = rustlib::breaker_new();
         config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
         configInput(LEFT_INPUT, "Left");
         configInput(RIGHT_INPUT, "Right");
@@ -24,33 +24,15 @@ struct Breaker : Module {
         configOutput(RIGHT_OUTPUT, "Right");
     }
 
-    ~Breaker() { potential::breaker_free(this->inner); }
+    ~Breaker() { rustlib::breaker_free(this->inner); }
 
     void process(const ProcessArgs &args) override {
-        Input *left_in = &inputs[LEFT_INPUT];
-        Input *right_in = &inputs[RIGHT_INPUT];
-        Input *reset_trigger = &inputs[RESET_INPUT];
-        Output *left_out = &outputs[LEFT_OUTPUT];
-        Output *right_out = &outputs[RIGHT_OUTPUT];
-        Output *tripped_gate = &outputs[TRIPPED_GATE_OUTPUT];
+        bool tripped_status = false;
+        const rustlib::Port *inputs = ffi_port(&this->inputs[0]);
+        rustlib::Port *outputs = ffi_port(&this->outputs[0]);
 
-        if (left_in->isConnected() || right_in->isConnected() ||
-            reset_trigger->isConnected()) {
-            int left_in_len = left_in->getChannels();
-            int right_in_len = right_in->getChannels();
-            bool tripped_status;
-
-            potential::breaker_process(
-                this->inner, left_in->getVoltages(), left_in_len,
-                right_in->getVoltages(), right_in_len,
-                reset_trigger->getVoltage(), &tripped_status,
-                tripped_gate->getVoltages(), left_out->getVoltages(),
-                PORT_MAX_CHANNELS, right_out->getVoltages(), PORT_MAX_CHANNELS);
-            left_out->setChannels(left_in_len);
-            right_out->setChannels(right_in_len);
-            lights[TRIPPED_LIGHT].setBrightness(
-                static_cast<float>(tripped_status));
-        }
+        this->inner->process_raw(inputs, outputs, tripped_status);
+        lights[TRIPPED_LIGHT].setBrightness(static_cast<float>(tripped_status));
     }
 };
 

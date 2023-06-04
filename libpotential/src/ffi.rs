@@ -5,6 +5,16 @@ pub mod bridge {
     extern "Rust" {
         type Port;
 
+        type Breaker;
+        unsafe fn process_raw(
+            self: &mut Breaker,
+            inputs: *const Port,
+            outputs: *mut Port,
+            tripped_status: &mut bool,
+        );
+        fn breaker_new() -> *mut Breaker;
+        unsafe fn breaker_free(ptr: *mut Breaker);
+
         unsafe fn mag_sign_process_raw(inputs: *const Port, outputs: *mut Port);
 
         type PolyShuffle;
@@ -29,6 +39,14 @@ fn drop_raw<T>(ptr: *mut T) {
     assert!(!ptr.is_null());
     let b = unsafe { Box::from_raw(ptr) };
     drop(b);
+}
+
+use crate::breaker::Breaker;
+pub fn breaker_new() -> *mut Breaker {
+    new_default_raw()
+}
+pub fn breaker_free(ptr: *mut Breaker) {
+    drop_raw(ptr)
 }
 
 use crate::mag_sign::mag_sign_process_raw;
