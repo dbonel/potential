@@ -11,7 +11,7 @@ CXXFLAGS +=
 LDFLAGS += libpotential/libpotential.a
 include $(RACK_DIR)/arch.mk
 ifdef ARCH_WIN
-	LDFLAGS += -lbcrypt -ladvapi32 -lkernel32 -ladvapi32 -luserenv -lkernel32 -lkernel32 -lws2_32 -lbcrypt -lntdll
+	LDFLAGS += -lbcrypt -ladvapi32 -lkernel32 -luserenv -lws2_32 -lntdll
 endif
 
 # Add .cpp files to the build
