@@ -1,6 +1,7 @@
 #pragma once
 #include <rack.hpp>
 
+#include "ffi.hpp"
 #include <potential.h>
 
 using namespace rack;

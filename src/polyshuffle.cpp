@@ -1,7 +1,7 @@
 #include "plugin.hpp"
 
 struct PolyShuffle : Module {
-    potential::PolyShuffle *inner = NULL;
+    rustlib::PolyShuffle *inner = NULL;
 
     enum ParamId { PARAMS_LEN };
     enum InputId { INPUT_INPUT, SHUFFLE_TRIGGER_INPUT, INPUTS_LEN };
@@ -9,7 +9,7 @@ struct PolyShuffle : Module {
     enum LightId { LIGHTS_LEN };
 
     PolyShuffle() {
-        this->inner = potential::polyshuffle_new();
+        this->inner = rustlib::polyshuffle_new();
 
         config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
         configInput(INPUT_INPUT, "Polyphonic");
@@ -17,20 +17,13 @@ struct PolyShuffle : Module {
         configOutput(OUTPUT_OUTPUT, "Polyphonic");
     }
 
-    ~PolyShuffle() { potential::polyshuffle_free(this->inner); }
+    ~PolyShuffle() { rustlib::polyshuffle_free(this->inner); }
 
     void process(const ProcessArgs &args) override {
-        Input *poly_inputs = &inputs[INPUT_INPUT];
-        Input *shuffle_trigger = &inputs[SHUFFLE_TRIGGER_INPUT];
-        Output *poly_outputs = &outputs[OUTPUT_OUTPUT];
+        const rustlib::Port *inputs = ffi_port(&this->inputs[0]);
+        rustlib::Port *outputs = ffi_port(&this->outputs[0]);
 
-        int inputs_len = poly_inputs->getChannels();
-
-        int outputs_len = potential::polyshuffle_process(
-            this->inner, poly_inputs->getVoltages(), inputs_len,
-            poly_outputs->getVoltages(), PORT_MAX_CHANNELS,
-            shuffle_trigger->getVoltage());
-        poly_outputs->setChannels(outputs_len);
+        this->inner->process_raw(inputs, outputs);
     }
 };
 
