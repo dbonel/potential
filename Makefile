@@ -25,14 +25,11 @@ include $(RACK_DIR)/plugin.mk
 # This is used by the libpotential Makefile
 export ARCH_NAME
 
-libpotential/libpotential.a:
-	$(MAKE) -C libpotential libpotential.a
-
-libpotential/potential.h:
-	$(MAKE) -C libpotential potential.h
+libpotential/libpotential.a libpotential/ffi.rs.h:
+	$(MAKE) -C libpotential all
 
 .PHONY: rustlib
-rustlib: libpotential/libpotential.a libpotential/potential.h
+rustlib: libpotential/libpotential.a libpotential/ffi.rs.h
 
 .PHONY: full
 full: rustlib all

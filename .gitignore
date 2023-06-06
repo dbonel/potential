@@ -9,6 +9,5 @@
 compile_flags.txt
 libpotential/ffi.rs.h
 libpotential/libpotential.a
-libpotential/potential.h
 libpotential/target
 /.clang-format
