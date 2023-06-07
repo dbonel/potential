@@ -1,4 +1,4 @@
-const PORT_MAX_CHANNELS: usize = 16;
+pub const PORT_MAX_CHANNELS: usize = 16;
 
 // This is our internal representation of rack::engine::Port. This allows us to
 // use borrowed pointers to the Rack engine's Port data, as long as we follow
