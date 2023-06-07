@@ -9,10 +9,6 @@ CXXFLAGS +=
 # Careful about linking to shared libraries, since you can't assume much about the user's environment and library search path.
 # Static libraries are fine, but they should be added to this plugin's build system.
 LDFLAGS += libpotential/libpotential.a
-include $(RACK_DIR)/arch.mk
-ifdef ARCH_WIN
-	LDFLAGS += -lbcrypt -ladvapi32 -lkernel32 -luserenv -lws2_32 -lntdll
-endif
 
 # Add .cpp files to the build
 SOURCES += $(wildcard src/*.cpp)
@@ -25,6 +21,13 @@ DISTRIBUTABLES += $(wildcard presets)
 
 # Include the Rack plugin Makefile framework
 include $(RACK_DIR)/plugin.mk
+
+# These are extra linker dependencies from the Rust stdlib. If an arch needs
+# them, they can be generated with `cargo rustc -- --print native-static-libs`
+# More details: https://users.rust-lang.org/t/solved-statically-linking-rust-library-yields-undefined-references/53815/6
+ifdef ARCH_WIN
+LDFLAGS += -lbcrypt -ladvapi32 -lkernel32 -luserenv -lws2_32 -lntdll
+endif
 
 # This is used by the libpotential Makefile
 export ARCH_NAME
