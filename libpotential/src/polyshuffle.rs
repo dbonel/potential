@@ -1,12 +1,10 @@
 use crate::module_config::{RackInput, RackOutput};
-use crate::rack::{InputPort, OutputPort, Port};
+use crate::rack::{InputPort, OutputPort, Port, PORT_MAX_CHANNELS};
 use crate::util::InputTrigger;
 
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-
-const PORT_MAX_CHANNELS: usize = 16;
 
 pub struct PolyShuffle {
     rng: SmallRng,
