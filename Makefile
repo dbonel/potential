@@ -1,46 +1,50 @@
-# If RACK_DIR is not defined when calling the Makefile, default to two directories above
-RACK_DIR ?= ../..
+all: plugin
 
-# FLAGS will be passed to both the C and C++ compiler
-FLAGS += -I./libpotential
-CFLAGS +=
-CXXFLAGS +=
+# TARGET_ARCH, if set, should be in the Rack format, so one of:
+# lin-x64 mac-arm64 mac-x64 win-x64
+ifdef TARGET_ARCH
+# The libpotential Makefile will use this.
+export TARGET_ARCH
 
-# Careful about linking to shared libraries, since you can't assume much about the user's environment and library search path.
-# Static libraries are fine, but they should be added to this plugin's build system.
-LDFLAGS += libpotential/libpotential.a
+ifeq ($(TARGET_ARCH),lin-x64)
+CROSS_COMPILE := x86_64-darwin
 
-# Add .cpp files to the build
-SOURCES += $(wildcard src/*.cpp)
+else ifeq ($(TARGET_ARCH),mac-arm64)
+CROSS_COMPILE := arm64-darwin
 
-# Add files to the ZIP package when running `make dist`
-# The compiled plugin and "plugin.json" are automatically added.
-DISTRIBUTABLES += res
-DISTRIBUTABLES += $(wildcard LICENSE*)
-DISTRIBUTABLES += $(wildcard presets)
+else ifeq ($(TARGET_ARCH),mac-x64)
+CROSS_COMPILE := x86_64-darwin
 
-# Include the Rack plugin Makefile framework
-include $(RACK_DIR)/plugin.mk
+else ifeq ($(TARGET_ARCH),win-x64)
+CROSS_COMPILE := x86_64-mingw32
 
-# These are extra linker dependencies from the Rust stdlib. If an arch needs
-# them, they can be generated with `cargo rustc -- --print native-static-libs`
-# More details: https://users.rust-lang.org/t/solved-statically-linking-rust-library-yields-undefined-references/53815/6
-ifdef ARCH_WIN
-LDFLAGS += -lbcrypt -ladvapi32 -lkernel32 -luserenv -lws2_32 -lntdll
+else
+$(error Unknown TARGET_ARCH $(TARGET_ARCH))
+
 endif
 
-# This is used by the libpotential Makefile
-export ARCH_NAME
+# The VCV SDK Makefile framework will need this.
+export CROSS_COMPILE
 
-libpotential/libpotential.a libpotential/ffi.rs.h:
-	$(MAKE) -C libpotential all
+endif
+
+libpotential/libpotential.a libpotential/ffi.rs.h: libpotential/src/*.rs
+	$(MAKE) -C libpotential libpotential.a ffi.rs.h
+
+.PHONY: plugin
+plugin: res/* src/*.cpp src/*.hpp libpotential/libpotential.a libpotential/ffi.rs.h
+	$(MAKE) -f Makefile.racksdk
 
 .PHONY: rustlib
 rustlib: libpotential/libpotential.a libpotential/ffi.rs.h
 
-.PHONY: full
-full: rustlib all
-
-.PHONY: fullclean
-fullclean: clean
+.PHONY: clean
+clean:
 	$(MAKE) -C libpotential clean
+	$(MAKE) -f Makefile.racksdk clean
+
+dist: plugin
+	$(MAKE) -f Makefile.racksdk dist
+
+install: plugin
+	$(MAKE) -f Makefile.racksdk install
