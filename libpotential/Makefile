@@ -18,9 +18,9 @@ else ifeq ($(TARGET_ARCH),mac-x64)
 CARGO_ENV_VARS := RUSTFLAGS="-C target-cpu=nehalem"
 RUST_TARGET_NAME := x86_64-apple-darwin
 
-else ifeq ($(TARGET_ARCH),lin-x64)
+else ifeq ($(TARGET_ARCH),win-x64)
 CARGO_ENV_VARS := RUSTFLAGS="-C target-cpu=nehalem"
-RUST_TARGET_NAME := x86_64-unknown-linux-gnu
+RUST_TARGET_NAME := x86_64-pc-windows-gnu
 
 else
 $(error Unknown TARGET_ARCH $(TARGET_ARCH))
