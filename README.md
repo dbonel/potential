@@ -14,7 +14,8 @@ extent that it's possible to do that.
 At the time of writing, this is fairly early in the lifecycle of this plugin.
 There are no releases at the moment, so you will need to build from source.
 
-The panel graphics are very rudimentary. 
+The panel graphics are very rudimentary. Please get in touch if you're feeling
+inspired and would like to contribute there.
 
 The plugin is also not in the VCV Rack library. Once there are automatic builds
 in this repository, we will see what the road looks like to submitting it.
@@ -30,14 +31,19 @@ you can do that by setting the `TARGET_ARCH` variable. This variable should
 match the format Rack uses for architectures, so one of `lin-x64`, `mac-arm64`,
 `mac-x64`, or `win-x64`.
 
-If you do not set a `TARGET_ARCH` variable, the Rust library will be optimized
-for the CPU it's built on, so anything that's intended to be portable should
-probably set an explicit `TARGET_ARCH`.
-
 For example:
 ```console
 $ make TARGET_ARCH=mac-x64
 ```
 
-We also expose the usual `make dist` and `make install` targets from the Rack
-SDK.
+Or you can use an environment variable:
+```console
+$ env TARGET_ARCH=lin-x64 make dist
+```
+
+If you don't set a `TARGET_ARCH` variable, the Rust code will be optimized for
+the CPU it's built on, so if you plan to use the plugin on a different machine
+from where you're compiling it, setting the arch explicitly is safer.
+
+We expose the usual `make dist` and `make install` targets from the Rack
+SDK, and the default target just builds the plugin.
