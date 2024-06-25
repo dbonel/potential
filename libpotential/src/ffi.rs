@@ -20,6 +20,7 @@ pub mod bridge {
             outputs: *mut Port,
             tripped_status: &mut bool,
         );
+        fn get_module_config_info(self: &mut Breaker) -> *mut ModuleConfigInfo;
         fn breaker_new() -> *mut Breaker;
         unsafe fn breaker_free(ptr: *mut Breaker);
 

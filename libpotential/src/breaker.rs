@@ -1,8 +1,14 @@
-use crate::module_config::{RackInput, RackOutput};
+use crate::module_config::{ModuleConfigInfo, RackInput, RackOutput, StaticModuleConfig};
 use crate::rack::{InputPort, OutputPort, Port};
 use crate::util::gate;
 
 const THRESHOLD: f32 = 12.0;
+
+impl StaticModuleConfig for Breaker {
+    const INPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Left", c"Right", c"Reset trigger"];
+
+    const OUTPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Tripped gate", c"Left", c"Right"];
+}
 
 struct BreakerInputs<'a> {
     left: InputPort<'a>,
@@ -141,6 +147,10 @@ impl Breaker {
         let inputs = BreakerInputs::from_raw_ptr(inputs);
         let mut outputs: BreakerOutputs = BreakerOutputs::from_raw_ptr(outputs);
         self.process(&inputs, &mut outputs, tripped_status)
+    }
+
+    pub fn get_module_config_info(&self) -> *mut ModuleConfigInfo {
+        ModuleConfigInfo::from_module_instance(self).into_ptr()
     }
 }
 
