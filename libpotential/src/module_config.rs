@@ -1,4 +1,4 @@
-use std::ffi::CStr;
+use std::ffi::{c_char, CStr};
 
 use crate::rack::Port;
 
@@ -39,6 +39,54 @@ where
     fn get_output_port_name(&self, index: usize) -> &'static CStr {
         assert!(index < Self::OUTPUT_PORTS.len());
         Self::OUTPUT_PORTS[index]
+    }
+}
+
+// This type carries all of the same information we could get through a module's
+// ModuleConfig interface, but as a standalone version optimized for use through
+// the FFI.
+pub struct ModuleConfigInfo {
+    input_port_names: Vec<&'static CStr>,
+    output_port_names: Vec<&'static CStr>,
+}
+
+impl ModuleConfigInfo {
+    // Construct a ModuleConfigInfo from anything that implements ModuleConfig,
+    // making a copy of all the module's config information.
+    pub fn from_module_instance<T: ModuleConfig>(module: &T) -> Self {
+        let input_port_count = module.get_input_port_count();
+        let input_port_names = (0..input_port_count)
+            .map(|index| module.get_input_port_name(index))
+            .collect();
+        let output_port_count = module.get_output_port_count();
+        let output_port_names = (0..output_port_count)
+            .map(|index| module.get_output_port_name(index))
+            .collect();
+        Self {
+            input_port_names,
+            output_port_names,
+        }
+    }
+
+    // We use the return value of this to pass through the FFI.
+    pub fn into_ptr(self) -> *mut Self {
+        Box::into_raw(Box::new(self))
+    }
+
+    pub fn get_input_port_count(&self) -> usize {
+        self.input_port_names.len()
+    }
+
+    pub fn get_output_port_count(&self) -> usize {
+        self.output_port_names.len()
+    }
+
+    pub fn get_input_port_name(&self, index: usize) -> *const c_char {
+        self.input_port_names[index].as_ptr()
+    }
+
+    pub fn get_output_port_name(&self, index: usize) -> *const c_char {
+        self.output_port_names[index].as_ptr()
     }
 }
 

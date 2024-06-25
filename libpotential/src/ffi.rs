@@ -1,9 +1,17 @@
+use crate::module_config::ModuleConfigInfo;
 use crate::rack::Port;
 
 #[cxx::bridge(namespace = "rustlib")]
 pub mod bridge {
     extern "Rust" {
         type Port;
+
+        type ModuleConfigInfo;
+        fn get_input_port_count(self: &ModuleConfigInfo) -> usize;
+        fn get_input_port_name(self: &ModuleConfigInfo, index: usize) -> *const c_char;
+        fn get_output_port_count(self: &ModuleConfigInfo) -> usize;
+        fn get_output_port_name(self: &ModuleConfigInfo, index: usize) -> *const c_char;
+        unsafe fn module_config_free(ptr: *mut ModuleConfigInfo);
 
         type Breaker;
         unsafe fn process_raw(
@@ -39,6 +47,10 @@ fn drop_raw<T>(ptr: *mut T) {
     assert!(!ptr.is_null());
     let b = unsafe { Box::from_raw(ptr) };
     drop(b);
+}
+
+pub fn module_config_free(ptr: *mut ModuleConfigInfo) {
+    drop_raw(ptr)
 }
 
 use crate::breaker::Breaker;
