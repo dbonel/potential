@@ -1,5 +1,25 @@
-use crate::module_config::{RackInput, RackOutput};
+use crate::module_config::{ModuleConfigInfo, RackInput, RackOutput, StaticModuleConfig};
 use crate::rack::{InputPort, OutputPort, Port};
+
+impl StaticModuleConfig for MagSign {
+    const INPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Bipolar", c"Magnitude", c"Sign"];
+
+    const OUTPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Magnitude", c"Sign", c"Bipolar"];
+}
+
+pub struct MagSign {}
+
+impl Default for MagSign {
+    fn default() -> Self {
+        Self {}
+    }
+}
+
+impl MagSign {
+    pub fn get_module_config_info(&self) -> *mut ModuleConfigInfo {
+        ModuleConfigInfo::from_module_instance(self).into_ptr()
+    }
+}
 
 fn mag_sign_process(inputs: &MagSignInput, outputs: &mut MagSignOutput) {
     // Upper half processing: decomposition
