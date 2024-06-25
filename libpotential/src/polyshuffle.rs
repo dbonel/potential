@@ -1,10 +1,16 @@
-use crate::module_config::{RackInput, RackOutput};
+use crate::module_config::{RackInput, RackOutput, StaticModuleConfig};
 use crate::rack::{InputPort, OutputPort, Port, PORT_MAX_CHANNELS};
 use crate::util::InputTrigger;
 
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+
+impl StaticModuleConfig for PolyShuffle {
+    const INPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Polyphonic", c"Shuffle trigger"];
+
+    const OUTPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Shuffled polyphonic"];
+}
 
 pub struct PolyShuffle {
     rng: SmallRng,
