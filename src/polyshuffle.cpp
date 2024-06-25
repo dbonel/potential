@@ -2,6 +2,7 @@
 
 struct PolyShuffle : Module {
     rustlib::PolyShuffle *inner = NULL;
+    rustlib::ModuleConfigInfo *config_info = NULL;
 
     enum ParamId { PARAMS_LEN };
     enum InputId { INPUT_INPUT, SHUFFLE_TRIGGER_INPUT, INPUTS_LEN };
@@ -10,14 +11,14 @@ struct PolyShuffle : Module {
 
     PolyShuffle() {
         this->inner = rustlib::polyshuffle_new();
-
-        config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
-        configInput(INPUT_INPUT, "Polyphonic");
-        configInput(SHUFFLE_TRIGGER_INPUT, "Shuffle trigger");
-        configOutput(OUTPUT_OUTPUT, "Polyphonic");
+        this->config_info = this->inner->get_module_config_info();
+        configure_from_info(this, this->config_info);
     }
 
-    ~PolyShuffle() { rustlib::polyshuffle_free(this->inner); }
+    ~PolyShuffle() {
+        rustlib::polyshuffle_free(this->inner);
+        rustlib::module_config_free(this->config_info);
+    }
 
     void process(const ProcessArgs &args) override {
         const rustlib::Port *inputs = ffi_port(&this->inputs[0]);
