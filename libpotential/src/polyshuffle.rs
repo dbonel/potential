@@ -1,4 +1,4 @@
-use crate::module_config::{RackInput, RackOutput, StaticModuleConfig};
+use crate::module_config::{ModuleConfigInfo, RackInput, RackOutput, StaticModuleConfig};
 use crate::rack::{InputPort, OutputPort, Port, PORT_MAX_CHANNELS};
 use crate::util::InputTrigger;
 
@@ -104,6 +104,10 @@ impl PolyShuffle {
             .for_each(|(o, i)| {
                 *o = i;
             });
+    }
+
+    pub fn get_module_config_info(&self) -> *mut ModuleConfigInfo {
+        ModuleConfigInfo::from_module_instance(self).into_ptr()
     }
 
     // This is handy for debugging.

@@ -27,6 +27,7 @@ pub mod bridge {
 
         type PolyShuffle;
         unsafe fn process_raw(self: &mut PolyShuffle, inputs: *const Port, outputs: *mut Port);
+        fn get_module_config_info(self: &PolyShuffle) -> *mut ModuleConfigInfo;
         fn polyshuffle_new() -> *mut PolyShuffle;
         unsafe fn polyshuffle_free(ptr: *mut PolyShuffle);
     }
