@@ -1,4 +1,46 @@
+use std::ffi::CStr;
+
 use crate::rack::Port;
+
+// This trait allows a module to describe its Rack IO configuration (inputs,
+// outputs, etc.) at runtime. The return types are intended to be compatible-ish
+// with the C++ side.
+pub trait ModuleConfig {
+    fn get_input_port_count(&self) -> usize;
+    fn get_input_port_name(&self, index: usize) -> &'static CStr;
+    fn get_output_port_count(&self) -> usize;
+    fn get_output_port_name(&self, index: usize) -> &'static CStr;
+}
+
+// Modules will probably want to implement this instead of manually implementing
+// the ModuleConfig trait.
+pub trait StaticModuleConfig {
+    const INPUT_PORTS: &'static [&'static CStr] = &[];
+    const OUTPUT_PORTS: &'static [&'static CStr] = &[];
+}
+
+impl<T> ModuleConfig for T
+where
+    T: StaticModuleConfig,
+{
+    fn get_input_port_count(&self) -> usize {
+        Self::INPUT_PORTS.len()
+    }
+
+    fn get_input_port_name(&self, index: usize) -> &'static CStr {
+        assert!(index < Self::INPUT_PORTS.len());
+        Self::INPUT_PORTS[index]
+    }
+
+    fn get_output_port_count(&self) -> usize {
+        Self::OUTPUT_PORTS.len()
+    }
+
+    fn get_output_port_name(&self, index: usize) -> &'static CStr {
+        assert!(index < Self::OUTPUT_PORTS.len());
+        Self::OUTPUT_PORTS[index]
+    }
+}
 
 pub trait RackInput: Sized {
     const COUNT: usize;
