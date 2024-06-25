@@ -130,15 +130,6 @@ struct PolyShuffleInput<'a> {
 impl RackInput for PolyShuffleInput<'_> {
     const COUNT: usize = 2;
 
-    fn get_name(index: usize) -> &'static str {
-        assert!(index < Self::COUNT);
-        match index {
-            0 => "Polyphonic",
-            1 => "Shuffle trigger",
-            _ => unreachable!(),
-        }
-    }
-
     fn from_raw_ptr(ports: *const Port) -> Self {
         let poly = InputPort::from_raw_port_index(ports, 0);
         let shuffle_trigger = InputPort::from_raw_port_index(ports, 1);
@@ -154,11 +145,6 @@ struct PolyShuffleOutput<'a> {
 }
 impl RackOutput for PolyShuffleOutput<'_> {
     const COUNT: usize = 1;
-
-    fn get_name(index: usize) -> &'static str {
-        assert!(index < Self::COUNT);
-        "Shuffled polyphonic"
-    }
 
     fn from_raw_ptr(ports: *mut Port) -> Self {
         let shuffled_poly = OutputPort::from_raw_port_index(ports, 0);

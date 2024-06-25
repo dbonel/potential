@@ -89,16 +89,6 @@ struct MagSignInput<'a> {
 impl RackInput for MagSignInput<'_> {
     const COUNT: usize = 3;
 
-    fn get_name(index: usize) -> &'static str {
-        assert!(index < Self::COUNT);
-        match index {
-            0 => "Bipolar",
-            1 => "Magnitude",
-            2 => "Sign",
-            _ => unreachable!(),
-        }
-    }
-
     fn from_raw_ptr(ports: *const Port) -> Self {
         let bipolar = InputPort::from_raw_port_index(ports, 0);
         let magnitude = InputPort::from_raw_port_index(ports, 1);
@@ -118,16 +108,6 @@ struct MagSignOutput<'a> {
 }
 impl RackOutput for MagSignOutput<'_> {
     const COUNT: usize = 3;
-
-    fn get_name(index: usize) -> &'static str {
-        assert!(index < Self::COUNT);
-        match index {
-            0 => "Magnitude",
-            1 => "Sign",
-            2 => "Bipolar",
-            _ => unreachable!(),
-        }
-    }
 
     fn from_raw_ptr(ports: *mut Port) -> Self {
         let magnitude = OutputPort::from_raw_port_index(ports, 0);

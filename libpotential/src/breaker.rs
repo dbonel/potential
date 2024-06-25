@@ -17,15 +17,6 @@ struct BreakerInputs<'a> {
 }
 impl RackInput for BreakerInputs<'_> {
     const COUNT: usize = 3;
-    fn get_name(index: usize) -> &'static str {
-        assert!(index < Self::COUNT);
-        match index {
-            0 => "Left",
-            1 => "Right",
-            2 => "Reset trigger",
-            _ => unreachable!(),
-        }
-    }
 
     fn from_raw_ptr(ports: *const Port) -> Self {
         let in_port = |ptr: *const Port, index: usize| {
@@ -50,16 +41,6 @@ struct BreakerOutputs<'a> {
 }
 impl RackOutput for BreakerOutputs<'_> {
     const COUNT: usize = 3;
-
-    fn get_name(index: usize) -> &'static str {
-        assert!(index < Self::COUNT);
-        match index {
-            0 => "Tripped gate",
-            1 => "Left",
-            2 => "Right",
-            _ => unreachable!(),
-        }
-    }
 
     fn from_raw_ptr(ports: *mut Port) -> Self {
         let out_port = |ptr: *mut Port, index: usize| {

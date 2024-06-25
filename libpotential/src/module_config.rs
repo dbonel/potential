@@ -92,13 +92,11 @@ impl ModuleConfigInfo {
 
 pub trait RackInput: Sized {
     const COUNT: usize;
-    fn get_name(index: usize) -> &'static str;
     fn from_raw_ptr(ports: *const Port) -> Self;
 }
 
 pub trait RackOutput: Sized {
     const COUNT: usize;
-    fn get_name(index: usize) -> &'static str;
     fn from_raw_ptr(ports: *mut Port) -> Self;
 }
 
@@ -106,10 +104,6 @@ pub trait RackOutput: Sized {
 pub struct NoInputs {}
 impl RackInput for NoInputs {
     const COUNT: usize = 0;
-
-    fn get_name(_index: usize) -> &'static str {
-        "none"
-    }
 
     fn from_raw_ptr(_ports: *const Port) -> Self {
         NoInputs {}
@@ -120,10 +114,6 @@ impl RackInput for NoInputs {
 pub struct NoOutputs {}
 impl RackOutput for NoOutputs {
     const COUNT: usize = 0;
-
-    fn get_name(_index: usize) -> &'static str {
-        "none"
-    }
 
     fn from_raw_ptr(_ports: *mut Port) -> Self {
         NoOutputs {}
@@ -141,13 +131,6 @@ mod tests {
 
     impl RackInput for TestInput<'_> {
         const COUNT: usize = 1;
-
-        fn get_name(index: usize) -> &'static str {
-            match index {
-                0 => "One",
-                _ => unreachable!(),
-            }
-        }
 
         fn from_raw_ptr(ports: *const Port) -> Self {
             let one = InputPort::from_raw_port_index(ports, 0);
