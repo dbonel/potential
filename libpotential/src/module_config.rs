@@ -153,7 +153,7 @@ mod tests {
 
     fn receiver(inputs: *mut Port) -> Vec<f32> {
         let inputs = TestInput::from_raw_ptr(inputs);
-        let voltages = inputs.one.as_slice();
+        let voltages = inputs.one.as_slice().unwrap();
         let voltages = Vec::from(voltages);
         voltages
     }

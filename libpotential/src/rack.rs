@@ -1,4 +1,7 @@
+use std::num::NonZeroU8;
+
 pub const PORT_MAX_CHANNELS: usize = 16;
+const MONOPHONIC: Option<NonZeroU8> = NonZeroU8::new(1);
 
 // This is our internal representation of rack::engine::Port. This allows us to
 // use borrowed pointers to the Rack engine's Port data, as long as we follow
@@ -6,14 +9,14 @@ pub const PORT_MAX_CHANNELS: usize = 16;
 #[repr(C)]
 pub struct Port {
     voltages: [f32; PORT_MAX_CHANNELS],
-    channels: u8,
+    channels: Option<NonZeroU8>,
     // We don't use these but include them for size/alignment matching.
     _lights: [f32; 3],
 }
 impl Default for Port {
     fn default() -> Self {
         let voltages = [0.0; PORT_MAX_CHANNELS];
-        let channels = 1;
+        let channels = MONOPHONIC;
         let _lights = [0.0; 3];
         Port {
             voltages,
@@ -67,21 +70,37 @@ impl<'a> InputPort<'a> {
 
     // Get a single voltage from the first channel. Returns None if the port
     // isn't connected (i.e. has 0 channels).
-    pub fn get_voltage_monophonic(&self) -> Option<f32> {
-        self.as_slice().first().copied()
+    pub fn get_monophonic_voltage(&self) -> Option<f32> {
+        self.as_slice().map(|voltages| {
+            // SAFETY: .as_slice() will never return a zero-length slice because
+            // of the guarantee provided by get_polyphony_count().
+            unsafe { *voltages.get_unchecked(0) }
+        })
     }
 
-    // Get the number of polyphony channels on the port. An unconnected port has
-    // 0 channels.
-    pub fn get_polyphony_count(&self) -> usize {
-        debug_assert!(self.inner.channels <= PORT_MAX_CHANNELS as u8);
-        self.inner.channels as usize
+    // Get a single voltage from the first channel, or 0.0 if the port is not
+    // connected.
+    pub fn get_zero_normaled_monophonic_voltage(&self) -> f32 {
+        self.get_monophonic_voltage().unwrap_or(0.0)
     }
 
-    // Get all of the voltages as a slice.
-    pub fn as_slice(&self) -> &[f32] {
-        let n = self.get_polyphony_count();
-        &self.inner.voltages[..n]
+    // Get the number of polyphony channels on the port. An unconnected port
+    // returns None. The polyphony count is guaranteed to be non-zero if the
+    // port is connected.
+    pub fn get_polyphony_count(&self) -> Option<usize> {
+        self.inner.channels.map(|channels| {
+            let channels = channels.get() as usize;
+            debug_assert!(channels <= PORT_MAX_CHANNELS);
+            channels
+        })
+    }
+
+    // Get all of the voltages as a slice. As with get_polyphony_count, an
+    // unconnected port returns None, and the slice length is guaranteed to be
+    // >0 if the port is connected.
+    pub fn as_slice(&self) -> Option<&[f32]> {
+        self.get_polyphony_count()
+            .map(|n| &self.inner.voltages[..n])
     }
 }
 
@@ -108,58 +127,106 @@ impl<'a> OutputPort<'a> {
     }
 
     // Set the polyphony count to 1, and output a single voltage.
-    pub fn set_voltage_monophonic(&mut self, voltage: f32) {
+    pub fn set_monophonic_voltage(&mut self, voltage: f32) {
         self.set_polyphony_count(1);
         self.inner.voltages[0] = voltage;
     }
 
     // Set the polyphony count, and zero any unused positions in the voltages
     // array. The Rack API does this same zeroing in setChannels().
-    pub fn set_polyphony_count(&mut self, n: usize) {
-        // Rack uses channels==0 to mean the port has no cable connected. Don't
-        // allow changes away from 0.
-        if self.inner.channels == 0 {
-            return;
-        }
-
-        // We keep "u" as the caller-requested number of channels (which could be 0).
-        let u = n.min(PORT_MAX_CHANNELS);
-
-        // Don't let the caller set channels==0 either, or exceed the Rack polyphony max.
-        let n = u.max(1);
-
-        // Let's not do a lot of needless memsets if we're not changing anything.
-        if n != self.inner.channels as usize {
-            // We use `m` here and not `n` because the caller may not remember to
-            // zero the first voltage if they tried to set channels to 0.
-            self.inner.voltages[u..].fill(0.0);
-            self.inner.channels = n as u8;
-        }
+    //
+    // If the port is currently disconnected, we will not change the polyphony
+    // count, and a None will be returned.
+    //
+    // If the requested polyphony count `n` is 0, we will set a single voltage of 0.0, and
+    // a None will be returned.
+    //
+    // The requested polyphony size `n` will be truncated to PORT_MAX_CHANNELS
+    // before applying the change.
+    pub fn set_polyphony_count(&mut self, n: usize) -> Option<usize> {
+        let n = clamp_polyphony_count(n) as u8;
+        let new_channels = NonZeroU8::new(n);
+        self.set_port_polyphony(new_channels)
     }
 
     // Set the polyphony channel count of this OutputPort to the same count as
     // a reference InputPort.
     pub fn set_polyphony_from(&mut self, other: &InputPort) {
-        let n = other.get_polyphony_count();
-        debug_assert!(n <= PORT_MAX_CHANNELS);
-        self.set_polyphony_count(n);
+        let reference_polyphony = other.get_polyphony_count();
+        let new_channels = reference_polyphony.map(|n| {
+            debug_assert!(n <= PORT_MAX_CHANNELS);
+            let n = clamp_polyphony_count(n) as u8;
+            // SAFETY: We know n is at least 1 because 0 is mapped to None.
+            unsafe { NonZeroU8::new_unchecked(n) }
+        });
+        self.set_port_polyphony(new_channels);
+    }
+
+    // This is the private inner implementation used by set_polyphony_count()
+    // and set_polyphony_from().
+    //
+    // SAFETY: The caller is responsible for upholding the new_channels <=
+    // PORT_MAX_CHANNELS invariant.
+    fn set_port_polyphony(&mut self, new_channels: Option<NonZeroU8>) -> Option<usize> {
+        let old_channels = self.inner.channels;
+        let r = match (old_channels, new_channels) {
+            // No change, no-op.
+            (c1, c2) if c1 == c2 => old_channels,
+
+            // Cable is connected, caller asked for 0.
+            (Some(_), None) => {
+                self.inner.channels = MONOPHONIC;
+                self.inner.voltages.fill(0.0);
+                new_channels
+            }
+
+            // Cable is connected, caller has changed polyphony count.
+            (Some(_), Some(c2)) => {
+                let c2 = c2.get() as usize;
+                self.inner.channels = new_channels;
+                self.inner.voltages[(c2)..].fill(0.0);
+                new_channels
+            }
+
+            // Cable is disconnected, no-op.
+            (None, _) => None,
+        };
+        r.map(|n| n.get() as usize)
     }
 
     // Get the output voltages as a mutable slice. The polyphony channel count
     // should already have been set before calling this.
-    pub fn as_slice_mut(&mut self) -> &mut [f32] {
-        let n = self.inner.channels as usize;
-        &mut self.inner.voltages[..n]
+    pub fn as_slice_mut(&mut self) -> Option<&mut [f32]> {
+        self.inner.channels.map(|n| {
+            let n = n.get() as usize;
+            &mut self.inner.voltages[..n]
+        })
     }
 
-    pub fn set_voltages_from_slice(&mut self, voltages: &[f32]) {
-        let n = voltages.len();
-        assert!(n <= PORT_MAX_CHANNELS);
-        self.set_polyphony_count(n);
-        if n > 0 {
-            self.as_slice_mut().copy_from_slice(voltages)
-        }
+    pub fn as_slice_mut_from_polyphony_count(&mut self, n: usize) -> Option<&mut [f32]> {
+        self.set_polyphony_count(n)
+            .map(|n| &mut self.inner.voltages[..n])
     }
+
+    // Set polyphonic voltages from a slice. This uses the same semantics as
+    // set_polyphony_count, so if the slice is longer than PORT_MAX_CHANNELS,
+    // the excess values will be ignored.
+    pub fn set_voltages_from_slice(&mut self, voltages: &[f32]) -> Option<usize> {
+        let n = voltages.len();
+        self.set_polyphony_count(n).and_then(|n1| {
+            self.as_slice_mut().map(|values| {
+                let n2 = values.len();
+                debug_assert_eq!(n1, n2);
+                values.copy_from_slice(&voltages[..n1]);
+                values.len()
+            })
+        })
+    }
+}
+
+// A helper function to clamp `count` to PORT_MAX_CHANNELS.
+fn clamp_polyphony_count(count: usize) -> usize {
+    PORT_MAX_CHANNELS.min(count)
 }
 
 pub struct ModuleLight<'a> {
