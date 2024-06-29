@@ -19,56 +19,58 @@ pub struct PolyShuffle {
     // is probably smaller than this, so this is only used as a base for the
     // channel_destinations map.
     channel_destinations_full: [usize; PORT_MAX_CHANNELS],
+    // Together, channel_count and channel_destinations are a cached subset
+    // of channel_destinations_full. If channel_count is Some(n), then n is
+    // the polyphony count, and channel_destinations[..n] will contain (0..n)
+    // in some permutation. The elements of channel_destinations[n..] have no
+    // guarantee of contents and should not be used.
+    //
+    // Setting channel_count to None marks the contents of channel_destinations
+    // as invalid, to be lazily recomputed when it's next used. Cache
+    // invalidations should be done when we get a shuffle trigger event, or when
+    // the polyphony count changes.
+    channel_count: Option<usize>,
     channel_destinations: [usize; PORT_MAX_CHANNELS],
-    channel_count: usize,
 }
 
 impl PolyShuffle {
     pub fn new() -> Self {
-        // This seed is just 8 bytes from /dev/urandom.
+        // This seed is just 8 bytes sampled from /dev/urandom.
         let rng = SmallRng::seed_from_u64(0xeafcf19c4c7cd3ac);
         let channel_destinations_full: [usize; PORT_MAX_CHANNELS] = core::array::from_fn(|n| n);
-        let channel_destinations = channel_destinations_full.clone();
-        let channel_count = 0;
+        let channel_destinations = channel_destinations_full;
         PolyShuffle {
             rng,
             shuffle_trigger: InputTrigger::new(),
             channel_destinations_full,
             channel_destinations,
-            channel_count,
+            channel_count: None,
         }
     }
 
     fn process(&mut self, inputs: &PolyShuffleInput, outputs: &mut PolyShuffleOutput) {
-        let channel_count = inputs.poly.get_polyphony_count();
-
         let trigger_voltage = inputs
             .shuffle_trigger
-            .get_voltage_monophonic()
-            .unwrap_or(0.0);
+            .get_zero_normaled_monophonic_voltage();
         if self.shuffle_trigger.process_voltage(trigger_voltage) {
-            // .shuffle() will call .resize(), so channel_count should be
-            // updated before calling it so we don't waste work.
-            self.channel_count = channel_count;
             self.shuffle();
         }
 
-        // Handle input polyphony count changing.
-        if channel_count != self.channel_count {
-            self.channel_count = channel_count;
-            self.resize();
+        if let Some(input_voltages) = inputs.poly.as_slice() {
+            let channel_count = input_voltages.len();
+            let destinations = self.get_channel_destinations(channel_count);
+            let mut output_buffer = [0.0; PORT_MAX_CHANNELS];
+            // Copy inputs to output buffer according to their mapped destinations.
+            input_voltages.iter().enumerate().for_each(|(i, value)| {
+                let destination_index = destinations[i];
+                output_buffer[destination_index] = *value;
+            });
+            outputs
+                .shuffled_poly
+                .set_voltages_from_slice(&output_buffer[..channel_count]);
+        } else {
+            outputs.shuffled_poly.set_polyphony_count(0);
         }
-
-        outputs.shuffled_poly.set_polyphony_from(&inputs.poly);
-
-        // Copy inputs to outputs according to their mapped destinations.
-        let orig = inputs.poly.as_slice();
-        let shuffled = outputs.shuffled_poly.as_slice_mut();
-        debug_assert_eq!(orig.len(), shuffled.len());
-        orig.iter().enumerate().for_each(|(i, value)| {
-            let destination = self.channel_destinations[i];
-            shuffled[destination] = *value;
-        });
     }
 
     pub fn process_raw(&mut self, inputs: *const Port, outputs: *mut Port) {
@@ -82,28 +84,41 @@ impl PolyShuffle {
         self.channel_destinations_full
             .as_mut_slice()
             .shuffle(&mut self.rng);
-        // The channel_destinations array will be stale now, regenerate it.
-        self.resize()
+        self.invalidate_channel_destinations();
     }
 
-    // Regenerate the channel destinations for the current polyphony count.
-    fn resize(&mut self) {
-        let n = self.channel_count;
+    // Mark the channel_destinations cache as invalid, forcing it to be
+    // regenerated next time it's needed.
+    fn invalidate_channel_destinations(&mut self) {
+        self.channel_count = None;
+    }
 
-        // Select just the output destinations that fit inside our channel count.
-        let subset = self
-            .channel_destinations_full
-            .iter()
-            .cloned()
-            .filter(|v| *v < n);
-
-        let channel_destinations = &mut self.channel_destinations[..n];
-        channel_destinations
-            .iter_mut()
-            .zip(subset)
-            .for_each(|(o, i)| {
-                *o = i;
-            });
+    // Get the cached channel_destinations array as a slice, regenerating it
+    // first if needed.
+    fn get_channel_destinations(&mut self, channel_count: usize) -> &[usize] {
+        assert!(channel_count <= self.channel_destinations_full.len());
+        match self.channel_count {
+            Some(c) if c == channel_count => &self.channel_destinations[..channel_count],
+            _ => {
+                let n = channel_count;
+                // Select just the output destinations that fit inside our channel count.
+                let subset = self
+                    .channel_destinations_full
+                    .as_slice()
+                    .iter()
+                    .copied()
+                    .filter(|v| *v < n);
+                let channel_destinations = &mut self.channel_destinations[..n];
+                channel_destinations
+                    .iter_mut()
+                    .zip(subset)
+                    .for_each(|(o, i)| {
+                        *o = i;
+                    });
+                self.channel_count = Some(channel_count);
+                &self.channel_destinations[..channel_count]
+            }
+        }
     }
 
     pub fn get_module_config_info(&self) -> *mut ModuleConfigInfo {
@@ -113,7 +128,7 @@ impl PolyShuffle {
     // This is handy for debugging.
     #[allow(dead_code)]
     fn get_destinations(&self) -> &[usize] {
-        &self.channel_destinations[..self.channel_count]
+        &self.channel_destinations[..self.channel_count.unwrap_or_default()]
     }
 }
 
@@ -179,8 +194,8 @@ mod tests {
             // set the voltages for low and high trigger states
             let mut t_low = OutputPort::wrap(&mut t_low);
             let mut t_high = OutputPort::wrap(&mut t_high);
-            t_low.set_voltage_monophonic(gate::LOW);
-            t_high.set_voltage_monophonic(gate::HIGH);
+            t_low.set_monophonic_voltage(gate::LOW);
+            t_high.set_monophonic_voltage(gate::HIGH);
         }
 
         // Test the initial state (channel permutation is unmodified).
@@ -227,10 +242,11 @@ mod tests {
                 // However, we should still be able to sort our voltages back to their original order without
                 // any going missing.
                 o1.as_slice_mut()
+                    .unwrap()
                     // Whenever .sort_floats() stabilizes, use that instead.
                     // https://github.com/rust-lang/rust/issues/93396
                     .sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-                assert_eq!(i1.as_slice(), o1.as_slice_mut());
+                assert_eq!(i1.as_slice().unwrap(), o1.as_slice_mut().unwrap());
             }
         }
 
@@ -254,13 +270,17 @@ mod tests {
 
             let i1 = InputPort::wrap(&i1);
             let mut o1 = OutputPort::wrap(&mut o1);
-            assert_eq!(i1.as_slice().len(), o1.as_slice_mut().len());
-            assert_ne!(i1.as_slice(), o1.as_slice_mut());
+            assert_eq!(
+                i1.as_slice().unwrap().len(),
+                o1.as_slice_mut().unwrap().len()
+            );
+            assert_ne!(i1.as_slice().unwrap(), o1.as_slice_mut().unwrap());
 
             // This should also pass the re-sorting test.
             o1.as_slice_mut()
+                .unwrap()
                 .sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-            assert_eq!(i1.as_slice(), o1.as_slice_mut());
+            assert_eq!(i1.as_slice().unwrap(), o1.as_slice_mut().unwrap());
         }
     }
 }
