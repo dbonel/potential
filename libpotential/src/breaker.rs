@@ -1,8 +1,10 @@
 use crate::module_config::{ModuleConfigInfo, RackInput, RackOutput, StaticModuleConfig};
-use crate::rack::{InputPort, OutputPort, Port};
+use crate::rack::{InputPort, OutputPort, Port, PORT_MAX_CHANNELS};
 use crate::util::gate;
 
 const THRESHOLD: f32 = 12.0;
+
+const ZEROES: [f32; PORT_MAX_CHANNELS] = [0.0; PORT_MAX_CHANNELS];
 
 impl StaticModuleConfig for Breaker {
     const INPUT_PORTS: &'static [&'static std::ffi::CStr] = &[c"Left", c"Right", c"Reset trigger"];
@@ -81,42 +83,41 @@ impl Breaker {
         use BreakerState::*;
 
         // If we received a reset trigger, close the breaker.
-        let reset_trigger_voltage = inputs.reset_trigger.get_voltage_monophonic().unwrap_or(0.0);
+        let reset_trigger_voltage = inputs.reset_trigger.get_zero_normaled_monophonic_voltage();
         if self.reset_trigger.process_voltage(reset_trigger_voltage) {
             self.state = Closed;
         }
 
         // If any of our input channels has a value out of range, trip the
         // breaker.
-        if let Closed = self.state {
-            let tripped = out_of_range(inputs.left.as_slice(), THRESHOLD)
-                || out_of_range(inputs.right.as_slice(), THRESHOLD);
+        if matches!(self.state, Closed) {
+            let left_in = inputs.left.as_slice();
+            let right_in = inputs.right.as_slice();
+            let tripped = left_in
+                .map(|left| out_of_range(left, THRESHOLD))
+                .unwrap_or(false)
+                || right_in
+                    .map(|right| out_of_range(right, THRESHOLD))
+                    .unwrap_or(false);
             if tripped {
                 self.state = Open;
             }
         }
 
-        outputs.left.set_polyphony_from(&inputs.left);
-        outputs.right.set_polyphony_from(&inputs.right);
-        let l_in = inputs.left.as_slice();
-        let r_in = inputs.right.as_slice();
-        let l_out = outputs.left.as_slice_mut();
-        let r_out = outputs.right.as_slice_mut();
-
-        match self.state {
+        let mute = match self.state {
             Closed => {
-                copy_values(l_in, l_out);
-                copy_values(r_in, r_out);
-                outputs.tripped_gate.set_voltage_monophonic(gate::LOW);
+                outputs.tripped_gate.set_monophonic_voltage(gate::LOW);
                 *tripped_status = false;
+                false
             }
             Open => {
-                copy_muted(l_in, l_out);
-                copy_muted(r_in, r_out);
-                outputs.tripped_gate.set_voltage_monophonic(gate::HIGH);
+                outputs.tripped_gate.set_monophonic_voltage(gate::HIGH);
                 *tripped_status = true;
+                true
             }
-        }
+        };
+        copy_or_mute(&inputs.left, &mut outputs.left, mute);
+        copy_or_mute(&inputs.right, &mut outputs.right, mute);
     }
 
     pub fn process_raw(
@@ -141,12 +142,18 @@ fn out_of_range(values: &[f32], threshold: f32) -> bool {
     values.iter().any(|n| n.abs() >= threshold)
 }
 
-fn copy_values(src: &[f32], dest: &mut [f32]) {
-    let n = src.len();
-    dest[..n].copy_from_slice(src);
-}
-
-fn copy_muted(src: &[f32], dest: &mut [f32]) {
-    let n = src.len();
-    dest[..n].fill(0.0);
+fn copy_or_mute(src: &InputPort, dest: &mut OutputPort, mute: bool) {
+    match src.as_slice() {
+        Some(voltages) => {
+            if !mute {
+                dest.set_voltages_from_slice(voltages);
+            } else {
+                let zeroes = &ZEROES[..voltages.len()];
+                dest.set_voltages_from_slice(zeroes);
+            }
+        }
+        None => {
+            dest.set_polyphony_count(0);
+        }
+    }
 }
